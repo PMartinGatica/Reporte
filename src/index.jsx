@@ -746,7 +746,7 @@ ${actionSpecifics}
           </div>
 
           {/* Preview del Cuerpo */}
-          <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden relative">
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
              {/* Indicador de modo */}
              {showAiReport && (
                  <div className="bg-violet-100 text-violet-800 text-xs font-bold px-4 py-2 text-center border-b border-violet-200 flex items-center justify-center gap-2">
@@ -754,11 +754,8 @@ ${actionSpecifics}
                  </div>
              )}
 
-             <div className="p-6 min-h-[500px] whitespace-pre-wrap text-sm leading-relaxed text-slate-800 font-sans">
-               {showAiReport ? aiReportText : generatedBody}
-             </div>
-             
-             <div className="absolute top-12 right-4 flex gap-2">
+             {/* Botones de acción */}
+             <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex justify-end gap-2">
                 <button
                   onClick={() => copyToClipboard(showAiReport ? aiReportText : generatedBody, 'body')}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm font-bold transition-all"
@@ -776,6 +773,10 @@ ${actionSpecifics}
                   {isGeneratingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                   {isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}
                 </button>
+             </div>
+
+             <div className="p-6 min-h-[500px] whitespace-pre-wrap text-sm leading-relaxed text-slate-800 font-sans">
+               {showAiReport ? aiReportText : generatedBody}
              </div>
           </div>
 
