@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Clipboard, Check, Wand2, Mail, AlertCircle, FileText, Send, RefreshCw, Lightbulb, Loader2, FileEdit, Box, Barcode } from 'lucide-react';
+import { Clipboard, Check, Wand2, Mail, AlertCircle, FileText, Send, RefreshCw, Lightbulb, Loader2, FileEdit, Box, Barcode, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 const ReportGenerator = () => {
   // Configuración de API Key (Desde variables de entorno)
@@ -51,7 +52,8 @@ const ReportGenerator = () => {
   // Estados de carga para IA
   const [isPolishing, setIsPolishing] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false); 
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [aiError, setAiError] = useState(null);
 
   const categories = [
@@ -359,6 +361,113 @@ ${actionSpecifics}
     }
   };
 
+  // Función para traducir el reporte al inglés y generar PDF
+  const generateEnglishPDF = async () => {
+    setIsGeneratingPDF(true);
+    setAiError(null);
+
+    try {
+      // Obtener el texto del reporte actual (IA o plantilla)
+      const reportText = showAiReport ? aiReportText : generatedBody;
+
+      // Traducir al inglés con Gemini
+      const translationPrompt = `
+        Translate the following technical report from Spanish to English.
+        Maintain the technical terminology and structure.
+        Keep the same formatting (bullet points, sections, etc.).
+
+        Report to translate:
+        ${reportText}
+      `;
+
+      const englishReport = await callGemini(
+        translationPrompt,
+        "You are a professional technical translator specialized in industrial and quality reports. Maintain precision and technical accuracy.",
+        "text/plain"
+      );
+
+      // Traducir el asunto también
+      const subjectPrompt = `Translate this email subject from Spanish to English, keeping the same format: ${generatedSubject}`;
+      const englishSubject = await callGemini(subjectPrompt, "Technical translator", "text/plain");
+
+      // Generar PDF
+      const doc = new jsPDF();
+
+      // Configuración de márgenes y ancho
+      const margin = 15;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const maxWidth = pageWidth - (margin * 2);
+      const lineHeight = 7;
+      let yPosition = margin;
+
+      // Título (Asunto)
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      const subjectLines = doc.splitTextToSize(englishSubject, maxWidth);
+      doc.text(subjectLines, margin, yPosition);
+      yPosition += lineHeight * subjectLines.length + 5;
+
+      // Separador
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 10;
+
+      // Cuerpo del reporte
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+
+      const reportLines = englishReport.split('\n');
+
+      for (const line of reportLines) {
+        // Verificar si necesitamos una nueva página
+        if (yPosition > doc.internal.pageSize.getHeight() - margin) {
+          doc.addPage();
+          yPosition = margin;
+        }
+
+        if (line.trim() === '') {
+          yPosition += lineHeight / 2;
+          continue;
+        }
+
+        // Detectar líneas de encabezado (MAYÚSCULAS o con ":")
+        if (line.match(/^[A-Z\s\-]+:?$/) || line.startsWith('**')) {
+          doc.setFont(undefined, 'bold');
+          const headerLines = doc.splitTextToSize(line.replace(/\*\*/g, ''), maxWidth);
+          doc.text(headerLines, margin, yPosition);
+          yPosition += lineHeight * headerLines.length;
+          doc.setFont(undefined, 'normal');
+        } else {
+          const textLines = doc.splitTextToSize(line, maxWidth);
+          doc.text(textLines, margin, yPosition);
+          yPosition += lineHeight * textLines.length;
+        }
+      }
+
+      // Pie de página con fecha
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Generated on ${dateStr}`, margin, doc.internal.pageSize.getHeight() - 10);
+
+      // Descargar el PDF
+      const filename = `Report_${formData.line}_${formData.model}_${Date.now()}.pdf`.replace(/\s+/g, '_');
+      doc.save(filename);
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      setAiError("Error generating English PDF. Please try again.");
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-800">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -649,13 +758,23 @@ ${actionSpecifics}
                {showAiReport ? aiReportText : generatedBody}
              </div>
              
-             <div className="absolute top-12 right-4">
-                <button 
+             <div className="absolute top-12 right-4 flex gap-2">
+                <button
                   onClick={() => copyToClipboard(showAiReport ? aiReportText : generatedBody, 'body')}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm font-bold transition-all"
                 >
                   {copiedBody ? <Check className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
                   {copiedBody ? 'Copiado' : 'Copiar Informe'}
+                </button>
+
+                <button
+                  onClick={generateEnglishPDF}
+                  disabled={isGeneratingPDF}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Traducir al inglés y descargar como PDF"
+                >
+                  {isGeneratingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}
                 </button>
              </div>
           </div>

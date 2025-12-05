@@ -6,7 +6,9 @@
       "Bash(npm run dev:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nConfiguración completa del proyecto React con Vite\n\n- Configuración de Vite como bundler\n- Tailwind CSS para estilos\n- Estructura src/ con componentes React\n- Variables de entorno para Gemini API\n- Configuración para deploy en Netlify\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git push:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAgregar configuración de Netlify y favicon\n\n- netlify.toml con configuración de build\n- Favicon SVG para evitar error 404\n- Redirects para SPA en Netlify\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []
